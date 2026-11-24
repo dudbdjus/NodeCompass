@@ -1,0 +1,1 @@
+"""Proxy Manager desktop application."""

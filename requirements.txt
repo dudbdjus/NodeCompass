@@ -1,0 +1,9 @@
+PySide6==6.12.0
+httpx==0.28.1
+SQLAlchemy==2.0.51
+alembic==1.20.1
+pywin32==312
+Babel==2.18.0
+paramiko==5.1.0
+qrcode==8.2
+IP2Location==8.11.0
