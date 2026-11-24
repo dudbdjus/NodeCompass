@@ -1,0 +1,33 @@
+# Local environments, builds and historical artifacts
+.venv/
+.tools/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+archive/
+*.exe
+*.zip
+*.log
+
+# Credentials, keys, databases and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.ppk
+*.pfx
+*.sqlite*
+*.db
+*.db-*
+*.mmdb
+*.bin
+*.BIN
+geoip/
+maxmind/
+ip2location/
+IP2LOCATION-LITE-DB3.BIN/
+*.local.*
