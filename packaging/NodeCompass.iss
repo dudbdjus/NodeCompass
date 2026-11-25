@@ -5,8 +5,8 @@
 [Setup]
 AppId={{6DDD4790-6A92-4BA2-B13D-5CFF231343FA}
 AppName=节点罗盘
-AppVersion=0.3.1
-VersionInfoVersion=0.3.1.0
+AppVersion=0.3.2
+VersionInfoVersion=0.3.2.0
 VersionInfoDescription=节点罗盘安装程序
 DefaultDirName={localappdata}\Programs\NodeCompass
 DefaultGroupName=节点罗盘
@@ -19,7 +19,7 @@ MinVersion=10.0
 UninstallDisplayName=节点罗盘
 UninstallDisplayIcon={app}\NodeCompass.exe
 SetupIconFile=..\src\proxy_manager\assets\app.ico
-OutputBaseFilename=NodeCompass-0.3.1-Setup-win-x64
+OutputBaseFilename=NodeCompass-0.3.2-Setup-win-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern

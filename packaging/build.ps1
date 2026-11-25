@@ -6,7 +6,7 @@ if (-not $Python) {
     $Python = Join-Path $root '.venv\Scripts\python.exe'
 }
 $spec = Join-Path $PSScriptRoot 'ProxyManager.spec'
-$stage = Join-Path $root $(if ($Release) { 'build\packaging-release-0.3.1' } else { 'build\packaging-preflight' })
+$stage = Join-Path $root $(if ($Release) { 'build\packaging-release-0.3.2' } else { 'build\packaging-preflight' })
 $dist = Join-Path $stage 'dist'
 $work = Join-Path $stage 'work'
 

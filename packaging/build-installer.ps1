@@ -7,7 +7,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 if (!$PayloadDir) { $PayloadDir = Join-Path $root 'build\packaging-preflight\dist' }
-if (!$OutputDir) { $OutputDir = Join-Path $root 'dist\0.3.1-nodecompass-installer' }
+if (!$OutputDir) { $OutputDir = Join-Path $root 'dist\0.3.2-nodecompass-installer' }
 $compilerPath = (Resolve-Path -LiteralPath $Compiler).ProviderPath
 $payload = (Resolve-Path -LiteralPath $PayloadDir).ProviderPath
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
@@ -19,4 +19,4 @@ Copy-Item -LiteralPath $libraryNotice.FullName -Destination (Join-Path $payload 
 
 & $compilerPath "/DPayloadDir=$payload" "/O$output" (Join-Path $PSScriptRoot 'NodeCompass.iss')
 if ($LASTEXITCODE -ne 0) { throw "Installer build failed (Inno Setup returned $LASTEXITCODE)." }
-Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $output 'NodeCompass-0.3.1-Setup-win-x64.exe')
+Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $output 'NodeCompass-0.3.2-Setup-win-x64.exe')

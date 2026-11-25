@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proxy-manager"
-version = "0.3.1"
+version = "0.3.2"
 description = "Windows desktop manager for Proxy-Seller ISP proxies"
 requires-python = ">=3.12,<3.13"
 dynamic = ["dependencies"]
