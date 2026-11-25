@@ -78,6 +78,51 @@ def test_manual_client_refresh_waits_for_list_then_verifies_regions(qtbot, monke
     assert panel.geo_worker is None
 
 
+def test_unchanged_new_client_is_rechecked_until_route_becomes_available(qtbot, monkeypatch):
+    now = [1000]
+    monkeypatch.setattr(ui, "monotonic", lambda: now[0])
+    name = "ISP-23-26.12.25"
+    responses = iter((
+        Result("ok", {23: Finding("default_direct")}, {23: name}),
+        Result("ok", {23: Finding("located", "8.8.4.23", True, "proxy-23", live_only=True)}, {23: name}),
+    ))
+    monkeypatch.setattr(ui, "inspect_panel", lambda *_: next(responses))
+
+    class ImmediateWorker:
+        def __init__(self, read):
+            self.read = read
+
+        def start(self):
+            self.result = self.read()
+
+        def is_alive(self):
+            return False
+
+    monkeypatch.setattr(ui, "Worker", ImmediateWorker)
+    panel = ui.PanelInventory(geo=SimpleNamespace(lookup=lambda _: Location("ok", city="纽约市")),
+                              ssh_context=lambda: (None, None))
+    received = []
+    panel.proxy_links_changed.connect(received.append)
+    qtbot.addWidget(panel)
+    panel.show()
+    panel.geo_timer.stop()
+    panel.credentials = PanelCredentials("https://example.test", "fixture-token")
+    panel.display(PanelRows((PanelClient(name, record_id=23),), 1), now[0])
+    panel.geo_tick()
+    panel.geo_tick()
+    assert panel.geo_pending and not received[-1]
+    now[0] += ui.GEO_RETRY_INTERVAL - 1
+    panel.geo_tick()
+    assert panel.geo_worker is None
+    now[0] += 1
+    panel.geo_tick()
+    panel.geo_tick()
+    assert not panel.geo_pending
+    assert panel.table.item(0, ui.CITY_COLUMN).text() == "纽约市"
+    assert received[-1]["8.8.4.23"].tag == "ISP-23"
+    assert "运行中路由" in received[-1]["8.8.4.23"].verification_note
+
+
 def test_recheck_and_transient_failures_keep_known_geo_until_conflicting_result(qtbot, monkeypatch):
     now = [1000]
     monkeypatch.setattr(ui, "monotonic", lambda: now[0])

@@ -29,10 +29,12 @@ def scenario():
         snapshot["disk"].append([f"proxy-{n}", "socks", [[f"8.8.4.{n}", 1080]], False])
         snapshot["rules"].append({"user": [name], "outboundTag": f"proxy-{n}"})
     snapshot["runtime"] = sorted(snapshot["disk"])
-    options = SimpleNamespace(error=None, changed=False, route_failure=False, before=None)
+    options = SimpleNamespace(error=None, changed=False, route_failure=False, live_new=False, live_flaps=False)
     observed = []
+    new_votes = 0
 
     def handler(req):
+        nonlocal new_votes
         path = req.url.path.split("/panel/api/")[1]
         observed.append((req.method, path))
         if path == "clients/list":
@@ -47,7 +49,10 @@ def scenario():
             assert form["ip"][0] in {"8.8.8.8", "1.1.1.1"} and "domain" not in form
             assert form["inboundTag"] == ["test-in"]
             n = users.index(form["email"][0]) + 1
-            obj = {"matched": n <= 22, "outboundTag": f"proxy-{n}" if n <= 22 else ""}
+            if n == 23:
+                new_votes += 1
+            matched = n <= 22 or options.live_new and (not options.live_flaps or new_votes <= 2)
+            obj = {"matched": matched, "outboundTag": f"proxy-{n}" if matched else ""}
         else:
             pytest.fail("unexpected RPC method")
         return httpx.Response(200, json={"success": True, "obj": obj})
@@ -63,6 +68,8 @@ def scenario():
         def read_xray_snapshot(self):
             self.count += 1
             result = deepcopy(snapshot)
+            if options.live_new:
+                result["runtime"].append(["proxy-23", "socks", [["8.8.4.23", 1080]], False])
             if options.changed and self.count == 2:
                 result["process"][1] += 1
             return json.dumps(result)
@@ -86,6 +93,23 @@ def test_23_client_mapping_and_default(scenario):
     assert result.rows[23] == Finding("default_direct", conditional=True)
     assert observed.count(("POST", "xray/routeTest")) == 46
     assert observed[-1] == "closed"
+
+
+def test_new_client_route_can_exist_only_in_running_core(scenario):
+    run, options, observed = scenario
+    options.live_new = True
+    result = run()
+    assert result.status == "ok"
+    assert result.rows[23] == Finding("located", "8.8.4.23", True, "proxy-23", live_only=True)
+    assert observed.count(("POST", "xray/routeTest")) == 48
+
+
+def test_changing_live_route_does_not_generate_a_proxy_match(scenario):
+    run, options, _ = scenario
+    options.live_new = options.live_flaps = True
+    result = run()
+    assert result.status == "ok" and result.rows[23] == Finding("ambiguous", conditional=True)
+    assert result.rows[22].status == "located"
 
 
 @pytest.mark.parametrize("error", ["ssh_host_key_changed", "ssh_disconnected"])

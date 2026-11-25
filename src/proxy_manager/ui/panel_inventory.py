@@ -16,7 +16,7 @@ from proxy_manager.display_labels import natural_key
 from proxy_manager.provider.panel_client import PanelError, fetch_all_clients, fetch_subscription_url
 from proxy_manager.services.geoip import SOURCE
 from proxy_manager.services.panel_geo import Result, inspect_panel, record_ids
-from proxy_manager.services.panel_proxy_links import is_relay_client, unique_proxy_links
+from proxy_manager.services.panel_proxy_links import LIVE_ROUTE_NOTE, is_relay_client, unique_proxy_links
 from .vps_views import local_stamp, plain
 from .workers import Worker
 from .cards import BYTES_PER_DISPLAY_GB
@@ -494,7 +494,12 @@ class PanelInventory(QWidget):
                 if confirmed is not None:
                     self.data = confirmed
                     self.geo_result = result
-                    self.geo_pending = False
+                    self.geo_pending = any(
+                        finding.status in {"ambiguous", "default_direct", "direct"}
+                        and not is_relay_client(result.users[ident])
+                        for ident, finding in result.rows.items()
+                    )
+                    self.geo_retry_at = monotonic() + GEO_RETRY_INTERVAL if self.geo_pending else 0
                     self.geo_message = ""
                 else:
                     diagnostic = getattr(result, "diagnostic", "")
@@ -552,6 +557,8 @@ class PanelInventory(QWidget):
             locations = ("—", "—", GEO_STATES.get(match.status, "暂不可用"))
         if match and match.conditional:
             detail.append("存在条件分流")
+        if match and match.live_only:
+            detail.append(LIVE_ROUTE_NOTE)
         if match and match.status == "default_direct":
             detail.append("未命中专属代理；启动配置默认出站为 freedom")
         if match and self.geo_message:

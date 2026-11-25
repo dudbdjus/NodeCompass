@@ -93,6 +93,7 @@ class Finding:
     ip: str = ""
     conditional: bool = False
     outbound_tag: str = ""
+    live_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -223,6 +224,7 @@ def inspect_panel(credential, profile, pin, cancel, *, ssh_factory=SshClient, tr
         default_tag = before["disk"][0][0] if disk else None
         clients = inventory(read)
         findings = {}
+        live_checks = {}
         for ident, (user, tags) in clients.items():
             check()
             if len(tags) != 1 or before["script"]:
@@ -235,7 +237,16 @@ def inspect_panel(credential, profile, pin, cancel, *, ssh_factory=SshClient, tr
                 continue
             votes = {route_decision(read, ip, user, tag) for ip in PROBES}
             if votes != {expected}:
-                findings[ident] = Finding("ambiguous", conditional=True)
+                # The running core can gain per-client routes after startup.
+                # Accept only a consistent live decision with a known, simple
+                # proxy when the file has no explicit matching rule.
+                selected = next(iter(votes)) if len(votes) == 1 else None
+                finding = classify(live.get(selected), conditional=True)
+                if expected is None and selected not in {None, "ambiguous"} and finding.status == "located":
+                    findings[ident] = replace(finding, outbound_tag=selected, live_only=True)
+                    live_checks[ident] = (user, tag, selected)
+                else:
+                    findings[ident] = Finding("ambiguous", conditional=True)
             elif expected is None:
                 cfg = live.get(default_tag)
                 state = ("default_direct" if before["started_from_file"] and cfg is not None
@@ -246,6 +257,9 @@ def inspect_panel(credential, profile, pin, cancel, *, ssh_factory=SshClient, tr
                 findings[ident] = replace(classify(live.get(expected), conditional), outbound_tag=expected)
         again = inventory(read)
         check()
+        for ident, (user, inbound, selected) in live_checks.items():
+            if {route_decision(read, ip, user, inbound) for ip in PROBES} != {selected}:
+                findings[ident] = Finding("ambiguous", conditional=True)
         second = _snapshot(client)
         check()
         return reconcile(before, second, clients, again, findings)

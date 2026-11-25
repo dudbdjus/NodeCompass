@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from proxy_manager.services.geoip import normalize_ip, public_ip
 
 
+LIVE_ROUTE_NOTE = "配置代理来自运行中路由核对，限已核对的公网 TLS 场景。"
+
+
 @dataclass(frozen=True)
 class PanelProxyLink:
     client: str
@@ -37,6 +40,7 @@ def unique_proxy_links(data, geo_result, usage, total_bytes, *, verification_not
         tag = "-".join(parts[:2]) if len(parts) >= 2 and all(parts[:2]) else client.name
         value, detail = usage(client)
         total = total_bytes(client)
+        note = "\n".join(filter(None, (verification_note, LIVE_ROUTE_NOTE if finding.live_only else "")))
         matches[str(ip)].append(PanelProxyLink(client.name, tag, value, detail,
-                                               total if total >= 0 else None, verification_note))
+                                               total if total >= 0 else None, note))
     return {ip: links[0] for ip, links in matches.items() if len(links) == 1}
